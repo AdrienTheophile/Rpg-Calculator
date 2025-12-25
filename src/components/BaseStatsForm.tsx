@@ -11,8 +11,12 @@ const BaseStatsForm = ({ strength, onStrengthChange }: BaseStatsFormProps) => {
       <label>Force : </label>
       <input
         type="number"
+        min={1}
         value={strength}
-        onChange={(e) => onStrengthChange(parseInt(e.target.value))}
+        onChange={(e) => {
+          const val = parseInt(e.target.value);
+          onStrengthChange(val < 1 ? 1 : val);
+        }}
       />
     </div>
   );
