@@ -5,6 +5,14 @@ export interface Item {
   image: string;
 }
 
+export interface Hero {
+  id: number;
+  name: string;
+  strength: number;
+  weapon: Item;
+  armor: Item;
+}
+
 export const WEAPONS: Item[] = [
   {
     id: 1,

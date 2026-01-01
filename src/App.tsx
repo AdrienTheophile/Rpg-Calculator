@@ -4,7 +4,7 @@ import { CharacterPreview } from "./components/CharacterPreview.tsx";
 import { InventorySelect } from "./components/InventorySelect.tsx";
 import { StatDisplay } from "./components/StatDisplay.tsx";
 import { useState, useMemo, useEffect } from "react";
-import { Item } from "./data.ts";
+import { Item, Hero } from "./data.ts";
 
 function calculateDamageIsSlow(strength: number, weapon: Item): number {
   if (!weapon) {
@@ -21,12 +21,74 @@ function App() {
 
   const [selectedWeapon, setSelectedWeapon] = useState([]);
   const [selectedArmor, setSelectedArmor] = useState([]);
+  const [heroName, setHeroName] = useState("");
+
+  const [savedHero, setSavedHero] = useState<Hero[]>([]);
 
   const totalDamage = useMemo(() => {
     return calculateDamageIsSlow(strength, selectedWeapon);
   }, [strength, selectedWeapon]);
 
   const totalDefense = selectedArmor ? selectedArmor.value : 0;
+
+  // FONCTIONS CONCERNANT LES HEROS
+
+  function handleSaveHero(
+    name: string,
+    strength: number,
+    weapon: Item,
+    armor: Item
+  ) {
+    const payload = {
+      name: name,
+      strength: strength,
+      weapon: `/api/weapons/${weapon?.id}`,
+      armor: `/api/armors/${armor?.id}`,
+    };
+
+    fetch("http://127.0.0.1:8000/api/heroes", {
+      method: "POST",
+      headers: { "Content-Type": "application/ld+json" },
+      body: JSON.stringify(payload),
+    }).then(() => {
+      alert("Héros sauvegardé !");
+      refreshHeroList();
+    });
+  }
+
+  function refreshHeroList() {
+    fetch("http://127.0.0.1:8000/api/heroes")
+      .then((response) => {
+        return response.json();
+      })
+      .then((data) => {
+        console.log(data);
+        const heroes = data.member.map((heroAPI) => ({
+          id: heroAPI.id,
+          name: heroAPI.name,
+          strength: heroAPI.strength,
+          weapon: heroAPI.weapon,
+          armor: heroAPI.armor,
+        }));
+        setSavedHero(heroes);
+      });
+  }
+
+  function loadHero(heroSelected: Hero) {
+    setHeroName(heroSelected.name);
+    setStrength(heroSelected.strength);
+
+    const idArmor = heroSelected.armor.id;
+    const idWeapon = heroSelected.weapon.id;
+
+    const newArmor = armorList.find((a) => idArmor === a.id);
+    const newWeapon = weaponList.find((w) => idWeapon === w.id);
+
+    if (newArmor && newWeapon) {
+      setSelectedArmor(newArmor);
+      setSelectedWeapon(newWeapon);
+    }
+  }
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/armors")
@@ -74,6 +136,10 @@ function App() {
     }
   }, [armorList]);
 
+  useEffect(() => {
+    refreshHeroList();
+  }, []);
+
   return (
     <div className="dashboard">
       <div className="character-panel">
@@ -81,6 +147,15 @@ function App() {
       </div>
 
       <div className="controls-panel">
+        <div>
+          <label>Nom : </label>
+          <input
+            type="text"
+            value={heroName}
+            onChange={(e) => setHeroName(e.target.value)}
+          />
+        </div>
+
         <BaseStatsForm strength={strength} onStrengthChange={setStrength} />
 
         <InventorySelect
@@ -98,6 +173,23 @@ function App() {
         />
 
         <StatDisplay damage={totalDamage} defense={totalDefense} />
+
+        <button
+          className="save-button"
+          onClick={() =>
+            handleSaveHero(heroName, strength, selectedWeapon, selectedArmor)
+          }
+        >
+          Save
+        </button>
+
+        <div>
+          {savedHero.map((hero) => (
+            <li onClick={() => loadHero(hero)} key={hero.id}>
+              {hero.name}
+            </li>
+          ))}
+        </div>
       </div>
     </div>
   );
